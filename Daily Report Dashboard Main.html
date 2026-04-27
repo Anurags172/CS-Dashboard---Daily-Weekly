@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f5f7;color:#1a1a1a;font-size:14px}
+.topbar{background:#0f172a;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.topbar .sub{font-size:11px;opacity:.6;margin-top:2px}
+.upload-btn{background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;transition:background .15s}
+.upload-btn:hover{background:#2563eb}
+.tabs{background:#fff;border-bottom:2px solid #e5e7eb;padding:0 20px;display:flex;gap:0;overflow-x:auto;position:sticky;top:57px;z-index:99}
+.tab{padding:13px 16px;cursor:pointer;font-size:12.5px;font-weight:500;color:#64748b;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s}
+.tab:hover{color:#0f172a}
+.tab.active{color:#0f172a;border-bottom-color:#3b82f6;font-weight:600}
+.content{padding:20px 24px;max-width:1440px;margin:0 auto}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:10px;padding:15px 16px;border:1px solid #e5e7eb;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent,#cbd5e1)}
+.kpi.green{--accent:#22c55e} .kpi.red{--accent:#ef4444} .kpi.amber{--accent:#f59e0b} .kpi.blue{--accent:#3b82f6} .kpi.purple{--accent:#8b5cf6} .kpi.teal{--accent:#14b8a6}
+.kpi .lbl{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.kpi .val{font-size:24px;font-weight:700;color:#0f172a;line-height:1}
+.kpi.green .val{color:#16a34a} .kpi.red .val{color:#dc2626} .kpi.amber .val{color:#d97706} .kpi.blue .val{color:#1d4ed8} .kpi.purple .val{color:#7c3aed} .kpi.teal .val{color:#0d9488}
+.kpi .sub{font-size:11px;color:#94a3b8;margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:#fff;border-radius:10px;padding:18px 20px;border:1px solid #e5e7eb;margin-bottom:16px}
+.card:last-child{margin-bottom:0}
+.card h3{font-size:11.5px;font-weight:700;color:#64748b;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px}
+.chart-h200{position:relative;height:200px}
+.chart-h240{position:relative;height:240px}
+.chart-h280{position:relative;height:280px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+table th{text-align:left;padding:9px 10px;background:#f8fafc;font-weight:700;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e5e7eb;white-space:nowrap}
+table td{padding:9px 10px;border-bottom:1px solid #f1f5f9;color:#374151}
+table tr:last-child td{border-bottom:none}
+table tr:hover td{background:#fafafa}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.g{background:#dcfce7;color:#15803d} .r{background:#fee2e2;color:#b91c1c} .a{background:#fef3c7;color:#b45309} .b{background:#dbeafe;color:#1d4ed8} .p{background:#ede9fe;color:#6d28d9} .gr{background:#f1f5f9;color:#475569}
+.bar-bg{background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.upload-zone{background:#fff;border:2px dashed #cbd5e1;border-radius:12px;padding:52px 24px;text-align:center;color:#94a3b8;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:#3b82f6;color:#3b82f6;background:#eff6ff}
+.upload-zone .icon{font-size:36px;margin-bottom:12px}
+.upload-zone p{font-size:15px;font-weight:600;margin-bottom:4px;color:#334155}
+.upload-zone span{font-size:12px}
+.panel{display:none} .panel.active{display:block}
+.info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e40af;margin-bottom:14px}
+.warn{background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#854d0e;margin-bottom:14px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.score-ring{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;border:4px solid;font-size:15px;font-weight:800}
+.efficiency-bar{height:10px;border-radius:5px;background:#e5e7eb;overflow:hidden;margin-top:4px}
+.shift-grid{display:grid;grid-template-columns:160px repeat(7,1fr);font-size:12px}
+.sg-cell{padding:9px 6px;text-align:center;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9}
+.sg-cell:last-child{border-right:none}
+.sg-hdr{font-weight:700;font-size:11px;color:#64748b;background:#f8fafc;text-transform:uppercase}
+.sh-a{background:#dbeafe;color:#1e40af;font-weight:700;border-radius:4px;padding:2px 0}
+.sh-b{background:#ede9fe;color:#6d28d9;font-weight:700;border-radius:4px;padding:2px 0}
+.sh-off{background:#f1f5f9;color:#94a3b8;border-radius:4px;padding:2px 0}
+input[type=file]{display:none}
+@media(max-width:768px){.grid2,.grid3{grid-template-columns:1fr}.kpi .val{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div><h1>&#128202; Daily Support Dashboard</h1><div class="sub" id="report-date">No data — upload your Agent Activity file</div></div>
+  <label class="upload-btn" for="file-input">&#8679; Upload CSV / Excel</label>
+  <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('summary',this)">Summary</div>
+  <div class="tab" onclick="showTab('resolution',this)">Resolution Time</div>
+  <div class="tab" onclick="showTab('agents',this)">Agents</div>
+  <div class="tab" onclick="showTab('efficiency',this)">Efficiency</div>
+  <div class="tab" onclick="showTab('hourly',this)">Hourly Load</div>
+  <div class="tab" onclick="showTab('repeat',this)">Repeat %</div>
+  <div class="tab" onclick="showTab('orders',this)">Orders</div>
+  <div class="tab" onclick="showTab('transfers',this)">Transfers</div>
+  <div class="tab" onclick="showTab('csat',this)">CSAT & DSAT</div>
+  <div class="tab" onclick="showTab('roster',this)">Roster</div>
+</div>
+<div class="content">
+
+<!-- SUMMARY -->
+<div id="panel-summary" class="panel active">
+  <div id="no-data" class="upload-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">&#128202;</div>
+    <p>Upload your Agent Activity file to begin</p>
+    <span>Supports CSV and Excel (.xlsx) &mdash; WhatsApp chats auto-filtered</span>
+  </div>
+  <div id="summary-data" style="display:none">
+    <div class="kpi-row" id="kpi-summary"></div>
+    <div class="grid2">
+      <div class="card"><h3>Resolution time distribution</h3><div class="chart-h200"><canvas id="c-dist"></canvas></div></div>
+      <div class="card"><h3>Chats by status</h3><div class="chart-h200"><canvas id="c-status"></canvas></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Chats per agent</h3><div class="chart-h200"><canvas id="c-agent-vol"></canvas></div></div>
+      <div class="card"><h3>Hourly volume overview</h3><div class="chart-h200"><canvas id="c-hourly-mini"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESOLUTION TIME -->
+<div id="panel-resolution" class="panel">
+  <div class="grid2">
+    <div class="card"><h3>Team percentiles (min)</h3><div id="rt-stats"></div></div>
+    <div class="card"><h3>Bucket distribution</h3><div id="rt-buckets"></div></div>
+  </div>
+  <div class="card"><h3>Median resolution by agent</h3><div class="chart-h240"><canvas id="c-agent-rt"></canvas></div></div>
+</div>
+
+<!-- AGENTS -->
+<div id="panel-agents" class="panel">
+  <div class="card">
+    <h3>Agent performance table</h3>
+    <table><thead><tr><th>Agent</th><th>Type</th><th>Chats</th><th>Completed</th><th>Avg Res</th><th>Median Res</th><th>75th</th><th>90th</th><th>1st Resp</th><th>Active Time</th><th>Repeat%</th></tr></thead><tbody id="agent-tbody"></tbody></table>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Disposition analysis — add a <strong>Disposition</strong> column to your file (VLOOKUP by Ticket ID)</h3>
+    <div id="disposition-note" class="warn">No Disposition column found in your file. Add a <strong>Disposition</strong> column matched by Ticket ID and re-upload to see disposition breakdown.</div>
+    <div id="disposition-content" style="display:none">
+      <div class="grid2" style="margin-top:0">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Top dispositions by volume</div>
+          <table><thead><tr><th>Disposition</th><th>Chats</th><th>Avg Res (min)</th><th>Median Res</th><th>% of Total</th></tr></thead><tbody id="disp-tbody"></tbody></table>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Disposition vs resolution time</div>
+          <div class="chart-h240"><canvas id="c-disp-rt"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Top disposition per agent</div>
+        <table><thead><tr><th>Agent</th><th>Top Disposition</th><th>Count</th><th>2nd Disposition</th><th>Count</th><th>Avg Res for Top Disp</th></tr></thead><tbody id="agent-disp-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EFFICIENCY -->
+<div id="panel-efficiency" class="panel">
+  <div class="info">Efficiency Score = weighted composite of: Resolution Time (30%) + First Response (20%) + Repeat Rate (25%) + Completion Rate (25%). Score out of 100 — higher is better.</div>
+  <div class="kpi-row" id="kpi-efficiency"></div>
+  <div class="grid2">
+    <div class="card"><h3>Efficiency score by agent</h3><div class="chart-h240"><canvas id="c-efficiency"></canvas></div></div>
+    <div class="card"><h3>Active time vs resolution time</h3><div class="chart-h240"><canvas id="c-active-vs-res"></canvas></div></div>
+  </div>
+  <div class="card"><h3>Agent efficiency breakdown</h3><table><thead><tr><th>Agent</th><th>Score</th><th>Res Time</th><th>1st Resp</th><th>Completion%</th><th>Repeat%</th><th>Avg Active</th><th>Chats/Hr Cap</th><th>Rating</th></tr></thead><tbody id="eff-tbody"></tbody></table></div>
+</div>
+
+<!-- HOURLY LOAD -->
+<div id="panel-hourly" class="panel">
+  <div class="info">Agents needed = CEIL(volume / 12.75) based on AHT=12min, Concurrency=3, Occupancy=85%</div>
+  <div class="card"><h3>Hourly volume vs roster capacity</h3><div class="chart-h280"><canvas id="c-hourly-full"></canvas></div></div>
+  <div class="card"><h3>Hour-by-hour staffing</h3>
+    <table><thead><tr><th>Hour</th><th>Volume</th><th>Agents Needed</th><th>Roster Cap</th><th>On Roster</th><th>Gap</th><th>Util%</th><th>Status</th><th>Nancy</th><th>Sanjay</th><th>Vamshi*</th><th>Chandan M</th><th>Arbaz</th><th>ChndnBS*</th></tr></thead><tbody id="hourly-tbody"></tbody></table>
+    <div style="margin-top:8px;font-size:11px;color:#94a3b8">* New agent (concurrency 2=8.5/hr) | Yellow rows = 13-16h overlap window</div>
+  </div>
+  <div class="card" id="wt-section">
+    <h3>Wait time analysis — add a <strong>Wait Time</strong> column to your file (VLOOKUP by Ticket ID, values in minutes or mm:ss)</h3>
+    <div id="wt-note" class="warn">No Wait Time data found. Add a <strong>Wait Time</strong> column to your file and re-upload.</div>
+    <div id="wt-content" style="display:none">
+      <div class="kpi-row" id="kpi-wt" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px"></div>
+      <div class="grid2">
+        <div class="card" style="border:1px solid #e5e7eb">
+          <h3>Avg wait time by hour</h3>
+          <div class="chart-h240"><canvas id="c-wt-hourly"></canvas></div>
+        </div>
+        <div class="card" style="border:1px solid #e5e7eb">
+          <h3>Wait time distribution (buckets)</h3>
+          <div class="chart-h240"><canvas id="c-wt-dist"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="border:1px solid #e5e7eb;margin-top:0">
+        <h3>Hourly wait time breakdown</h3>
+        <table>
+          <thead><tr><th>Hour</th><th>Chats</th><th>Avg Wait (min)</th><th>Median Wait</th><th>Max Wait</th><th>% &gt; 5 min</th><th>% &gt; 10 min</th><th>Status</th></tr></thead>
+          <tbody id="wt-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card" style="border:1px solid #e5e7eb;margin-top:0">
+        <h3>Wait time by agent — how fast agents pick up after assignment</h3>
+        <table>
+          <thead><tr><th>Agent</th><th>Chats w/ Wait</th><th>Avg Wait (min)</th><th>Median Wait</th><th>75th %ile</th><th>Max Wait</th><th>Rating</th></tr></thead>
+          <tbody id="wt-agent-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REPEAT -->
+<div id="panel-repeat" class="panel">
+  <div class="kpi-row" id="kpi-repeat" style="grid-template-columns:repeat(4,1fr)"></div>
+  <div class="grid2">
+    <div class="card"><h3>Repeat % by agent</h3><table><thead><tr><th>Agent</th><th>Chats</th><th>Repeat</th><th>Repeat%</th><th>Flag</th></tr></thead><tbody id="repeat-tbody"></tbody></table></div>
+    <div class="card"><h3>Contact frequency</h3><div class="chart-h240"><canvas id="c-freq"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ORDERS -->
+<div id="panel-orders" class="panel">
+  <div class="kpi-row" id="kpi-orders" style="grid-template-columns:repeat(4,1fr)"></div>
+  <div class="grid2">
+    <div class="card"><h3>Top orders by contact volume</h3><table><thead><tr><th>Order</th><th>Contacts</th><th>Agents</th><th>Avg Res (min)</th><th>Status</th></tr></thead><tbody id="order-tbody"></tbody></table></div>
+    <div class="card"><h3>Orders with 4+ contacts (needs attention)</h3><table><thead><tr><th>Order</th><th>Contacts</th><th>Last Agent</th><th>Likely Issue</th></tr></thead><tbody id="order-hot-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- TRANSFERS -->
+<div id="panel-transfers" class="panel">
+  <div class="kpi-row" id="kpi-transfers" style="grid-template-columns:repeat(4,1fr)"></div>
+  <div class="grid2">
+    <div class="card"><h3>Transfer rate by agent</h3><table><thead><tr><th>Agent</th><th>Chats</th><th>Transferred</th><th>Transfer%</th><th>Flag</th></tr></thead><tbody id="transfer-tbody"></tbody></table></div>
+    <div class="card"><h3>Transfer details</h3><table><thead><tr><th>Ticket</th><th>From Agent</th><th>Reason</th></tr></thead><tbody id="transfer-detail-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- CSAT -->
+<div id="panel-csat" class="panel">
+  <div class="warn" id="csat-warn">Add a <strong>CSAT Rating</strong> column (values 1-5) to your file matched by Ticket ID, then re-upload. Ratings 4-5 = CSAT, 1-3 = DSAT.</div>
+  <div class="kpi-row" id="kpi-csat" style="grid-template-columns:repeat(5,1fr)"></div>
+  <div class="grid2">
+    <div class="card"><h3>Rating distribution</h3><div class="chart-h240"><canvas id="c-ratings"></canvas></div></div>
+    <div class="card"><h3>CSAT vs DSAT by agent</h3><div class="chart-h240"><canvas id="c-csat-agent"></canvas></div></div>
+  </div>
+  <div class="card">
+    <h3>CSAT &amp; DSAT by agent</h3>
+    <table><thead><tr><th>Agent</th><th>Type</th><th>Total Rated</th><th>CSAT (4-5)</th><th>CSAT %</th><th>DSAT (1-3)</th><th>DSAT %</th><th>Avg Score</th><th>5 Star</th><th>1 Star</th><th>Rating</th></tr></thead><tbody id="csat-agent-tbody"></tbody></table>
+  </div>
+  <div class="card" style="margin-top:0"><h3>DSAT tickets — follow-up list (rating 1-3)</h3><table><thead><tr><th>Ticket</th><th>Agent</th><th>Customer</th><th>Rating</th><th>Order</th><th>Disposition</th><th>Status</th></tr></thead><tbody id="dsat-tbody"></tbody></table></div>
+</div>
+
+<!-- ROSTER -->
+<div id="panel-roster" class="panel">
+  <div class="info">Recommended roster based on your volume pattern. Shift A: 08:00-17:00 | Shift B: 13:00-22:00 | Overlap 13-17h covers peak hour.</div>
+  <div class="kpi-row" id="kpi-roster" style="grid-template-columns:repeat(4,1fr)"></div>
+  <div class="card">
+    <h3>Weekly shift schedule</h3>
+    <div style="overflow-x:auto">
+      <div class="shift-grid" id="shift-grid"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Daily coverage count</h3><table id="coverage-table"><thead><tr><th>Shift</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead><tbody></tbody></table></div>
+    <div class="card"><h3>Top 5 peak hours — staffing check</h3><div id="peak-check"></div></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+const AGENTS=['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna','Chandan M','Mohammed Arbaz','Chandan Kumar BS'];
+const NEW_AGENTS=['Vamshi Krishna','Chandan Kumar BS'];
+const ASHORT={'Nancy Priyanka F':'Nancy','Sanjay Joseph V':'Sanjay','Vamshi Krishna':'Vamshi','Chandan M':'Chandan M','Mohammed Arbaz':'Arbaz','Chandan Kumar BS':'ChandanBS'};
+const ACOLOR={'Nancy Priyanka F':'#7c3aed','Sanjay Joseph V':'#0369a1','Vamshi Krishna':'#dc2626','Chandan M':'#1d4ed8','Mohammed Arbaz':'#b45309','Chandan Kumar BS':'#16a34a'};
+const ROSTER_CAP={8:40,9:40,10:40,11:40,12:40,13:80,14:80,15:80,16:80,17:40,18:40,19:40,20:40,21:40,22:30,23:30};
+const ROSTER_AG={8:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna'],9:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna'],10:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna'],11:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna'],12:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna'],13:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna','Chandan M','Mohammed Arbaz','Chandan Kumar BS'],14:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna','Chandan M','Mohammed Arbaz','Chandan Kumar BS'],15:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna','Chandan M','Mohammed Arbaz','Chandan Kumar BS'],16:['Nancy Priyanka F','Sanjay Joseph V','Vamshi Krishna','Chandan M','Mohammed Arbaz','Chandan Kumar BS'],17:['Chandan M','Mohammed Arbaz','Chandan Kumar BS'],18:['Chandan M','Mohammed Arbaz','Chandan Kumar BS'],19:['Chandan M','Mohammed Arbaz','Chandan Kumar BS'],20:['Chandan M','Mohammed Arbaz','Chandan Kumar BS'],21:['Chandan M','Mohammed Arbaz','Chandan Kumar BS'],22:['Chandan M','Mohammed Arbaz'],23:['Chandan M','Mohammed Arbaz']};
+
+let CH={}, G=null;
+
+function showTab(n,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+n).classList.add('active');
+  if(G) renderTab(n);
+}
+
+// Parsers
+function parseDT(s){
+  if(!s||s==='-') return null;
+  if(s instanceof Date) return s;
+  if(typeof s==='number') return new Date((s-25569)*86400000);
+  const m=String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4}),?\s+(\d{2}):(\d{2}):(\d{2})/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+m[6]);
+  return null;
+}
+function parseMMSS(s){
+  if(!s||s==='-'||String(s).trim()==='-') return null;
+  s=String(s);
+  let days=0;
+  if(s.includes('day')){const dm=s.match(/(\d+)\s+day/);if(dm)days=+dm[1];s=s.replace(/\d+\s+days?,\s*/,'');}
+  const p=s.trim().split(':');
+  try{if(p.length>=2) return days*1440+ +p[0]+ +p[1]/60;}catch(e){}
+  return null;
+}
+
+// Stats
+function pct(arr,p){if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);const i=(p/100)*(s.length-1);const lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
+function med(arr){return pct(arr,50);}
+function avg(arr){return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;}
+function fmt(n,d=1){return isNaN(n)||n===null?'-':Number(n).toFixed(d);}
+
+function destroyC(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+
+function processData(rows){
+  const wa=rows.filter(r=>{const s=String(r['Source']||'').toLowerCase().trim();return s==='whatsapp'||s==='whats app';});
+  const phoneFreq={},orderFreq={};
+  wa.forEach(r=>{
+    const p=String(r['Customer Phone']||'');if(p&&p!=='-')phoneFreq[p]=(phoneFreq[p]||0)+1;
+    const o=String(r['Order Name']||'');if(o&&o!=='nan'&&o!=='-'&&o!=='undefined')orderFreq[o]=(orderFreq[o]||0)+1;
+  });
+  const processed=wa.map(r=>{
+    const start=parseDT(r['Started At']),end=parseDT(r['Ended At']);
+    const resMin=(start&&end)?(end-start)/60000:null;
+    const phone=String(r['Customer Phone']||'');
+    const order=String(r['Order Name']||'');
+    const csatRaw=r['CSAT Rating']||r['csat_rating']||r['CSAT']||'';
+    const csat=csatRaw&&csatRaw!=='-'&&!isNaN(parseInt(csatRaw))?parseInt(csatRaw):null;
+    return{
+      agent:r['Agent Name']||'Unknown',
+      phone,order,
+      customer:r['Customer Name']||'',
+      status:String(r['Status']||'').toLowerCase().trim(),
+      resMin:(resMin&&resMin>0&&resMin<1440)?resMin:null,
+      hour:start?start.getHours():null,
+      isRepeat:phoneFreq[phone]>1?1:0,
+      isRepeatOrder:orderFreq[order]>1?1:0,
+      ticketId:r['Ticket ID']||'',
+      frMin:parseMMSS(r['First Response Duration (mm:ss)']),
+      activeMin:parseMMSS(r['Active Time (mm:ss)']),
+      durMin:parseMMSS(r['Duration (mm:ss)']),
+      handoffReason:r['Handoff Reason']||'',
+      csat,
+      disposition: String(r['Disposition']||r['disposition']||r['Category']||r['category']||''),
+      waitMin: (function(){
+        const w = r['Wait Time']||r['wait_time']||r['WaitTime']||'';
+        const s = String(w).trim();
+        if(!s||s==='-'||s==='nan'||s==='undefined') return null;
+        // handle mm:ss:00 format like "03:45:00"
+        const p = s.split(':');
+        if(p.length>=2){
+          try{
+            let days=0;
+            if(s.includes('day')){const dm=s.match(/(\d+)\s+day/);if(dm)days=+dm[1];}
+            return days*1440 + +p[0] + +p[1]/60;
+          }catch(e){}
+        }
+        // handle plain number (already minutes)
+        const n = parseFloat(s);
+        if(!isNaN(n)&&n>=0&&n<1440) return n;
+        return null;
+      })(),
+    };
+  });
+  return{wa:processed,phoneFreq,orderFreq};
+}
+
+function renderTab(name){
+  const{wa,phoneFreq,orderFreq}=G;
+  const total=wa.length;
+  const resTimes=wa.map(r=>r.resMin).filter(v=>v!==null&&v>0);
+  const hours=Array.from({length:16},(_,i)=>i+8);
+  const vols=hours.map(h=>wa.filter(r=>r.hour===h).length);
+
+  if(name==='summary'){
+    const comp=wa.filter(r=>r.status==='completed').length;
+    const trans=wa.filter(r=>r.status==='transferred').length;
+    const m=med(resTimes),p75=pct(resTimes,75),p90=pct(resTimes,90);
+    const rep=wa.filter(r=>r.isRepeat).length;
+    const uniq=Object.keys(phoneFreq).length;
+    const frTimes=wa.map(r=>r.frMin).filter(v=>v!==null&&v>=0&&v<60);
+    const csatRows=wa.filter(r=>r.csat!==null);
+    document.getElementById('kpi-summary').innerHTML=[
+      {l:'Total WA Chats',v:total,s:'WhatsApp only',c:''},
+      {l:'Completed',v:comp,s:(total?(comp/total*100).toFixed(1)+'%':''),c:'green'},
+      {l:'Transferred',v:trans,s:(total?(trans/total*100).toFixed(1)+'%':''),c:'amber'},
+      {l:'Median Res',v:fmt(m)+' min',s:`75th: ${fmt(p75)}  90th: ${fmt(p90)}`,c:'blue'},
+      {l:'Repeat Chats',v:rep,s:(total?(rep/total*100).toFixed(1)+'% of chats':''),c:'red'},
+      {l:'Unique Customers',v:uniq,s:'distinct phones',c:''},
+      {l:'Avg 1st Response',v:frTimes.length?fmt(avg(frTimes))+' min':'-',s:'time to first reply',c:'teal'},
+      {l:'Avg CSAT',v:csatRows.length?fmt(avg(csatRows.map(r=>r.csat)))+'/5':'No data',s:csatRows.length?csatRows.length+' rated':'add CSAT column',c:csatRows.length&&avg(csatRows.map(r=>r.csat))>=4?'green':csatRows.length?'amber':''},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+
+    const bktE=[0,5,10,20,30,45,60,Infinity],bktL=['0-5','6-10','11-20','21-30','31-45','46-60','60+'];
+    const bktC=bktL.map((_,i)=>resTimes.filter(v=>v>bktE[i]&&v<=bktE[i+1]).length);
+    destroyC('c-dist');
+    CH['c-dist']=new Chart(document.getElementById('c-dist'),{type:'bar',data:{labels:bktL,datasets:[{data:bktC,backgroundColor:['#16a34a','#16a34a','#ca8a04','#ca8a04','#dc2626','#dc2626','#991b1b'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+
+    const statMap={};wa.forEach(r=>{statMap[r.status]=(statMap[r.status]||0)+1;});
+    destroyC('c-status');
+    CH['c-status']=new Chart(document.getElementById('c-status'),{type:'doughnut',data:{labels:Object.keys(statMap),datasets:[{data:Object.values(statMap),backgroundColor:['#16a34a','#1d4ed8','#ca8a04','#dc2626'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}}}});
+
+    const agVols=AGENTS.map(a=>wa.filter(r=>r.agent===a).length);
+    destroyC('c-agent-vol');
+    CH['c-agent-vol']=new Chart(document.getElementById('c-agent-vol'),{type:'bar',data:{labels:AGENTS.map(a=>ASHORT[a]),datasets:[{data:agVols,backgroundColor:AGENTS.map(a=>ACOLOR[a]),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+
+    destroyC('c-hourly-mini');
+    CH['c-hourly-mini']=new Chart(document.getElementById('c-hourly-mini'),{type:'line',data:{labels:hours.map(h=>h+':00'),datasets:[{data:vols,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxTicksLimit:8}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+  }
+
+  if(name==='resolution'){
+    const m=med(resTimes),p75=pct(resTimes,75),p90=pct(resTimes,90);
+    document.getElementById('rt-stats').innerHTML=[['Median',fmt(m)],['75th pctile',fmt(p75)],['90th pctile',fmt(p90)],['Average',fmt(avg(resTimes))],['Min',fmt(Math.min(...resTimes))],['Max',fmt(Math.max(...resTimes))]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#64748b">${l}</span><strong>${v} min</strong></div>`).join('');
+    const bktE=[0,5,10,20,30,45,60,Infinity],bktL=['0-5','6-10','11-20','21-30','31-45','46-60','60+'];
+    const bktColors=['#16a34a','#16a34a','#ca8a04','#ca8a04','#dc2626','#dc2626','#991b1b'];
+    const maxC=Math.max(...bktL.map((_,i)=>resTimes.filter(v=>v>bktE[i]&&v<=bktE[i+1]).length));
+    document.getElementById('rt-buckets').innerHTML=bktL.map((l,i)=>{const cnt=resTimes.filter(v=>v>bktE[i]&&v<=bktE[i+1]).length;const p=total?cnt/total*100:0;const w=maxC?cnt/maxC*100:0;return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f7fa"><span style="width:65px;font-size:12px;color:#64748b">${l}</span><div class="bar-bg" style="flex:1"><div class="bar-fill" style="width:${w}%;background:${bktColors[i]}"></div></div><span style="font-size:12px;font-weight:700;width:26px;text-align:right">${cnt}</span><span style="font-size:11px;color:#94a3b8;width:36px;text-align:right">${p.toFixed(1)}%</span></div>`;}).join('');
+    const agMeds=AGENTS.map(a=>{const t=wa.filter(r=>r.agent===a).map(r=>r.resMin).filter(v=>v!==null&&v>0);return t.length?med(t):0;});
+    destroyC('c-agent-rt');
+    CH['c-agent-rt']=new Chart(document.getElementById('c-agent-rt'),{type:'bar',data:{labels:AGENTS.map(a=>ASHORT[a]),datasets:[{label:'Median (min)',data:agMeds,backgroundColor:AGENTS.map(a=>ACOLOR[a]),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+  }
+
+  if(name==='agents'){
+    const teamMed=med(resTimes);
+    document.getElementById('agent-tbody').innerHTML=AGENTS.map(a=>{
+      const rows=wa.filter(r=>r.agent===a);if(!rows.length)return`<tr><td colspan="11" style="color:#ccc">${a} — no data</td></tr>`;
+      const t=rows.map(r=>r.resMin).filter(v=>v!==null&&v>0);
+      const m=t.length?med(t):0,p75=t.length?pct(t,75):0,p90=t.length?pct(t,90):0;
+      const comp=rows.filter(r=>r.status==='completed').length;
+      const rep=rows.filter(r=>r.isRepeat).length;
+      const repP=rows.length?rep/rows.length*100:0;
+      const frT=rows.map(r=>r.frMin).filter(v=>v!==null&&v>=0&&v<60);
+      const actT=rows.map(r=>r.activeMin).filter(v=>v!==null&&v>0&&v<480);
+      const vs=m-teamMed;
+      const isNew=NEW_AGENTS.includes(a);
+      return`<tr><td><span class="dot" style="background:${ACOLOR[a]}"></span><strong>${a}</strong></td><td><span class="badge ${isNew?'a':'b'}">${isNew?'New':'Senior'}</span></td><td><strong>${rows.length}</strong></td><td>${comp} <span style="color:#94a3b8;font-size:11px">(${rows.length?(comp/rows.length*100).toFixed(0):0}%)</span></td><td>${fmt(avg(t))} min</td><td><strong>${fmt(m)} min</strong> <span style="font-size:11px;color:${vs>3?'#dc2626':vs<-3?'#16a34a':'#94a3b8'}">${vs>0?'+':''}${fmt(vs)}</span></td><td>${fmt(p75)}</td><td>${fmt(p90)}</td><td>${frT.length?fmt(avg(frT))+' min':'-'}</td><td>${actT.length?fmt(avg(actT))+' min':'-'}</td><td><span class="badge ${repP>60?'r':repP>40?'a':'g'}">${repP.toFixed(0)}%</span></td></tr>`;
+    }).join('');
+  }
+
+  if(name==='disposition-inject'){} // placeholder
+
+  // DISPOSITION — injected into agents tab
+  (function renderDisposition(){
+    const dispRows = wa.filter(r=>r.disposition && r.disposition!=='' && r.disposition!=='undefined' && r.disposition!=='nan');
+    const dispNote = document.getElementById('disposition-note');
+    const dispContent = document.getElementById('disposition-content');
+    if(!dispNote||!dispContent) return;
+    if(!dispRows.length){ dispNote.style.display='block'; dispContent.style.display='none'; return; }
+    dispNote.style.display='none'; dispContent.style.display='block';
+
+    // Aggregate by disposition
+    const dispMap={};
+    dispRows.forEach(r=>{
+      if(!dispMap[r.disposition]) dispMap[r.disposition]={count:0,resTimes:[],agents:{}};
+      dispMap[r.disposition].count++;
+      if(r.resMin) dispMap[r.disposition].resTimes.push(r.resMin);
+      dispMap[r.disposition].agents[r.agent]=(dispMap[r.disposition].agents[r.agent]||0)+1;
+    });
+    const dispArr=Object.entries(dispMap).sort((a,b)=>b[1].count-a[1].count);
+    const topDisps=dispArr.slice(0,10);
+
+    // Table
+    document.getElementById('disp-tbody').innerHTML=topDisps.map(([d,v])=>{
+      const m=v.resTimes.length?med(v.resTimes):0;
+      const a2=v.resTimes.length?avg(v.resTimes):0;
+      const pct2=dispRows.length?v.count/dispRows.length*100:0;
+      return`<tr><td><strong>${d}</strong></td><td><span class="badge b">${v.count}</span></td><td>${fmt(a2)}</td><td><strong>${fmt(m)}</strong></td><td>${pct2.toFixed(1)}%</td></tr>`;
+    }).join('');
+
+    // Chart - disposition vs median resolution time
+    const top8=topDisps.slice(0,8);
+    destroyC('c-disp-rt');
+    CH['c-disp-rt']=new Chart(document.getElementById('c-disp-rt'),{
+      type:'bar',
+      data:{
+        labels:top8.map(([d])=>d.length>18?d.substring(0,16)+'..':d),
+        datasets:[
+          {label:'Volume',data:top8.map(([,v])=>v.count),backgroundColor:'#3b82f6',borderRadius:3,yAxisID:'y'},
+          {label:'Median Res (min)',data:top8.map(([,v])=>v.resTimes.length?med(v.resTimes):0),backgroundColor:'#f59e0b',borderRadius:3,yAxisID:'y1'}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},
+        scales:{
+          x:{ticks:{font:{size:10},autoSkip:false,maxRotation:30}},
+          y:{ticks:{font:{size:10}},beginAtZero:true,title:{display:true,text:'Volume',font:{size:10}}},
+          y1:{ticks:{font:{size:10}},beginAtZero:true,position:'right',title:{display:true,text:'Res (min)',font:{size:10}},grid:{drawOnChartArea:false}}
+        }
+      }
+    });
+
+    // Per agent top dispositions
+    document.getElementById('agent-disp-tbody').innerHTML=AGENTS.map(ag=>{
+      const agRows=wa.filter(r=>r.agent===ag&&r.disposition&&r.disposition!=='');
+      if(!agRows.length) return`<tr><td>${ag}</td><td colspan="5" style="color:#ccc">No disposition data</td></tr>`;
+      const agDispMap={};
+      agRows.forEach(r=>{
+        if(!agDispMap[r.disposition]) agDispMap[r.disposition]={count:0,resTimes:[]};
+        agDispMap[r.disposition].count++;
+        if(r.resMin) agDispMap[r.disposition].resTimes.push(r.resMin);
+      });
+      const sorted=Object.entries(agDispMap).sort((a,b)=>b[1].count-a[1].count);
+      const top1=sorted[0]||['—',{count:0,resTimes:[]}];
+      const top2=sorted[1]||['—',{count:0,resTimes:[]}];
+      const avgResTop=top1[1].resTimes.length?avg(top1[1].resTimes):0;
+      return`<tr>
+        <td><span class="dot" style="background:${ACOLOR[ag]}"></span><strong>${ag}</strong></td>
+        <td>${top1[0]}</td><td><span class="badge b">${top1[1].count}</span></td>
+        <td style="color:#64748b">${top2[0]}</td><td><span class="badge gr">${top2[1].count}</span></td>
+        <td>${avgResTop?fmt(avgResTop)+' min':'-'}</td>
+      </tr>`;
+    }).join('');
+  })();
+
+  if(name==='hourly-wt-inject'){} // placeholder
+
+  // WAIT TIME — injected into hourly tab
+  if(name==='hourly'){
+    const wtNote = document.getElementById('wt-note');
+    const wtContent = document.getElementById('wt-content');
+    if(!wtNote||!wtContent) return;
+    const wtRows = wa.filter(r=>r.waitMin!==null&&r.waitMin>=0&&r.waitMin<480);
+    if(!wtRows.length){ wtNote.style.display='block'; wtContent.style.display='none'; }
+    else {
+      wtNote.style.display='none'; wtContent.style.display='block';
+      const wtTimes = wtRows.map(r=>r.waitMin);
+      const wtAvg = avg(wtTimes), wtMed = med(wtTimes), wtMax = Math.max(...wtTimes);
+      const wt5 = wtTimes.filter(v=>v>5).length, wt10 = wtTimes.filter(v=>v>10).length;
+
+      // KPIs
+      document.getElementById('kpi-wt').innerHTML=[
+        {l:'Chats with Wait Data',v:wtRows.length,s:'of '+total+' total',c:''},
+        {l:'Avg Wait Time',v:fmt(wtAvg)+' min',s:'team average',c:wtAvg>10?'red':wtAvg>5?'amber':'green'},
+        {l:'Median Wait Time',v:fmt(wtMed)+' min',s:'50th percentile',c:wtMed>10?'red':wtMed>5?'amber':'green'},
+        {l:'Waited > 5 min',v:wt5,s:(wtRows.length?wt5/wtRows.length*100:0).toFixed(1)+'% of chats',c:wt5/wtRows.length>0.3?'red':'amber'},
+        {l:'Max Wait Time',v:fmt(wtMax)+' min',s:'longest single wait',c:wtMax>30?'red':wtMax>15?'amber':''},
+      ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+
+      // Hourly wait times
+      const hours2=Array.from({length:16},(_,i)=>i+8);
+      const hourlyAvgWT=hours2.map(h=>{
+        const t=wa.filter(r=>r.hour===h&&r.waitMin!==null&&r.waitMin>=0&&r.waitMin<480).map(r=>r.waitMin);
+        return t.length?avg(t):0;
+      });
+      const hourlyMedWT=hours2.map(h=>{
+        const t=wa.filter(r=>r.hour===h&&r.waitMin!==null&&r.waitMin>=0&&r.waitMin<480).map(r=>r.waitMin);
+        return t.length?med(t):0;
+      });
+
+      // Hourly chart
+      destroyC('c-wt-hourly');
+      CH['c-wt-hourly']=new Chart(document.getElementById('c-wt-hourly'),{
+        type:'bar',
+        data:{
+          labels:hours2.map(h=>h+':00'),
+          datasets:[
+            {label:'Avg Wait (min)',data:hourlyAvgWT,backgroundColor:hourlyAvgWT.map(v=>v>10?'#dc2626':v>5?'#f59e0b':'#3b82f6'),borderRadius:3},
+            {label:'Median Wait (min)',data:hourlyMedWT,type:'line',borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:2,pointRadius:3}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{ticks:{font:{size:10},autoSkip:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}
+      });
+
+      // Wait time distribution buckets
+      const wtBktE=[0,1,3,5,10,15,30,Infinity];
+      const wtBktL=['0-1 min','1-3 min','3-5 min','5-10 min','10-15 min','15-30 min','30+ min'];
+      const wtBktC=wtBktL.map((_,i)=>wtTimes.filter(v=>v>wtBktE[i]&&v<=wtBktE[i+1]).length);
+      const wtBktColors=['#16a34a','#16a34a','#84cc16','#f59e0b','#f97316','#dc2626','#991b1b'];
+      destroyC('c-wt-dist');
+      CH['c-wt-dist']=new Chart(document.getElementById('c-wt-dist'),{
+        type:'bar',
+        data:{labels:wtBktL,datasets:[{data:wtBktC,backgroundColor:wtBktColors,borderRadius:3}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:30}},y:{ticks:{font:{size:11}},beginAtZero:true}}}
+      });
+
+      // Hourly breakdown table
+      document.getElementById('wt-tbody').innerHTML=hours2.map((h,i)=>{
+        const hRows=wa.filter(r=>r.hour===h&&r.waitMin!==null&&r.waitMin>=0&&r.waitMin<480);
+        if(!hRows.length) return`<tr><td><strong>${String(h).padStart(2,'0')}:00</strong></td><td>${wa.filter(r=>r.hour===h).length}</td><td colspan="6" style="color:#ccc">No wait time data this hour</td></tr>`;
+        const t=hRows.map(r=>r.waitMin);
+        const hAvg=avg(t),hMed=med(t),hMax=Math.max(...t);
+        const h5=t.filter(v=>v>5).length,h10=t.filter(v=>v>10).length;
+        const status=hAvg>10?'<span style="color:#dc2626;font-weight:700">High</span>':hAvg>5?'<span style="color:#d97706;font-weight:600">Mid</span>':'<span style="color:#16a34a">Good</span>';
+        const isOv=h>=13&&h<=16;
+        return`<tr style="background:${isOv?'#fefce8':''}">
+          <td><strong>${String(h).padStart(2,'0')}:00</strong>${isOv?' <span class="badge g" style="font-size:9px">peak</span>':''}</td>
+          <td>${hRows.length}</td>
+          <td><strong style="color:${hAvg>10?'#dc2626':hAvg>5?'#d97706':'#16a34a'}">${fmt(hAvg)}</strong></td>
+          <td>${fmt(hMed)}</td>
+          <td>${fmt(hMax)}</td>
+          <td>${h5} <span style="color:#94a3b8;font-size:11px">(${t.length?(h5/t.length*100).toFixed(0):0}%)</span></td>
+          <td>${h10} <span style="color:#94a3b8;font-size:11px">(${t.length?(h10/t.length*100).toFixed(0):0}%)</span></td>
+          <td>${status}</td>
+        </tr>`;
+      }).join('');
+
+      // Agent wait time table
+      document.getElementById('wt-agent-tbody').innerHTML=AGENTS.map(a=>{
+        const aRows=wa.filter(r=>r.agent===a&&r.waitMin!==null&&r.waitMin>=0&&r.waitMin<480);
+        if(!aRows.length) return`<tr><td><span class="dot" style="background:${ACOLOR[a]}"></span>${a}</td><td colspan="6" style="color:#ccc">No wait time data</td></tr>`;
+        const t=aRows.map(r=>r.waitMin);
+        const aAvg=avg(t),aMed=med(t),aMax=Math.max(...t),aP75=pct(t,75);
+        const rating=aMed<=3?'Fast':aMed<=7?'Average':'Slow';
+        const rc=aMed<=3?'g':aMed<=7?'a':'r';
+        return`<tr>
+          <td><span class="dot" style="background:${ACOLOR[a]}"></span><strong>${a}</strong></td>
+          <td>${aRows.length}</td>
+          <td><strong style="color:${aAvg>10?'#dc2626':aAvg>5?'#d97706':'#16a34a'}">${fmt(aAvg)}</strong></td>
+          <td>${fmt(aMed)}</td>
+          <td>${fmt(aP75)}</td>
+          <td>${fmt(aMax)}</td>
+          <td><span class="badge ${rc}">${rating}</span></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  if(name==='efficiency'){
+    const teamMed=med(resTimes)||1;
+    const teamFR=avg(wa.map(r=>r.frMin).filter(v=>v!==null&&v>=0&&v<60))||1;
+    const scores=AGENTS.map(a=>{
+      const rows=wa.filter(r=>r.agent===a);if(!rows.length)return{a,score:0,m:0,fr:0,compP:0,repP:0,actAvg:0};
+      const t=rows.map(r=>r.resMin).filter(v=>v!==null&&v>0);
+      const m=t.length?med(t):teamMed;
+      const frT=rows.map(r=>r.frMin).filter(v=>v!==null&&v>=0&&v<60);
+      const fr=frT.length?avg(frT):teamFR;
+      const comp=rows.filter(r=>r.status==='completed').length;
+      const compP=rows.length?comp/rows.length*100:0;
+      const rep=rows.filter(r=>r.isRepeat).length;
+      const repP=rows.length?rep/rows.length*100:0;
+      const actT=rows.map(r=>r.activeMin).filter(v=>v!==null&&v>0&&v<480);
+      const actAvg=actT.length?avg(actT):0;
+      // Score: lower res=better, lower FR=better, higher comp=better, lower rep=better
+      const rtScore=Math.max(0,Math.min(100,100-(m/teamMed-1)*50));
+      const frScore=Math.max(0,Math.min(100,100-(fr/teamFR-1)*30));
+      const compScore=compP;
+      const repScore=Math.max(0,100-repP);
+      const score=Math.round(rtScore*0.3+frScore*0.2+compScore*0.25+repScore*0.25);
+      return{a,score,m:fmt(m),fr:fr<60?fmt(fr):'-',compP:compP.toFixed(0),repP:repP.toFixed(0),actAvg:actAvg?fmt(actAvg):'-',rows:rows.length};
+    }).sort((a,b)=>b.score-a.score);
+
+    document.getElementById('kpi-efficiency').innerHTML=scores.slice(0,3).map((s,i)=>[
+      {l:'Top Performer',c:'green'},{l:'2nd Place',c:'blue'},{l:'3rd Place',c:'purple'}
+    ][i]).map((k,i)=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${scores[i].a.split(' ')[0]}</div><div class="sub">Score: ${scores[i].score}/100</div></div>`).join('');
+
+    destroyC('c-efficiency');
+    CH['c-efficiency']=new Chart(document.getElementById('c-efficiency'),{type:'bar',data:{labels:scores.map(s=>ASHORT[s.a]||s.a.split(' ')[0]),datasets:[{label:'Score',data:scores.map(s=>s.score),backgroundColor:scores.map(s=>s.score>=75?'#16a34a':s.score>=55?'#ca8a04':'#dc2626'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},beginAtZero:true,max:100}}}});
+
+    const agMeds2=AGENTS.map(a=>{const t=wa.filter(r=>r.agent===a).map(r=>r.resMin).filter(v=>v!==null&&v>0);return t.length?med(t):0;});
+    const agActs=AGENTS.map(a=>{const t=wa.filter(r=>r.agent===a).map(r=>r.activeMin).filter(v=>v!==null&&v>0&&v<480);return t.length?avg(t):0;});
+    destroyC('c-active-vs-res');
+    CH['c-active-vs-res']=new Chart(document.getElementById('c-active-vs-res'),{type:'bar',data:{labels:AGENTS.map(a=>ASHORT[a]),datasets:[{label:'Median Res (min)',data:agMeds2,backgroundColor:'#3b82f6',borderRadius:3},{label:'Avg Active Time (min)',data:agActs,backgroundColor:'#8b5cf6',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+
+    document.getElementById('eff-tbody').innerHTML=scores.map((s,i)=>`<tr><td><span class="dot" style="background:${ACOLOR[s.a]}"></span>${s.a}</td><td><strong style="color:${s.score>=75?'#16a34a':s.score>=55?'#ca8a04':'#dc2626'};font-size:16px">${s.score}</strong></td><td>${s.m} min</td><td>${s.fr} min</td><td>${s.compP}%</td><td>${s.repP}%</td><td>${s.actAvg} min</td><td>${s.rows?((60/12)*3*0.85*(s.rows>0?1:0)).toFixed(0):'-'}/hr cap</td><td><span class="badge ${s.score>=75?'g':s.score>=55?'a':'r'}">${s.score>=75?'Excellent':s.score>=55?'Good':'Needs attention'}</span></td></tr>`).join('');
+  }
+
+  if(name==='hourly'){
+    const caps=hours.map(h=>ROSTER_CAP[h]||0);
+    destroyC('c-hourly-full');
+    CH['c-hourly-full']=new Chart(document.getElementById('c-hourly-full'),{type:'bar',data:{labels:hours.map(h=>h+':00'),datasets:[{label:'Incoming chats',data:vols,backgroundColor:vols.map((v,i)=>v>(caps[i]||0)?'#dc2626':v>(caps[i]||0)*0.85?'#f59e0b':'#3b82f6'),borderRadius:3,order:2},{label:'Roster capacity',data:caps,type:'line',borderColor:'#16a34a',backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#16a34a',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{ticks:{font:{size:11},autoSkip:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+
+    document.getElementById('hourly-tbody').innerHTML=hours.map(h=>{
+      const vol=wa.filter(r=>r.hour===h).length;
+      const rAg=ROSTER_AG[h]||[];
+      const cap=ROSTER_CAP[h]||0;
+      const needed=vol>0?Math.ceil(vol/12.75):0;
+      const gap=rAg.length-needed;
+      const util=cap?vol/cap:0;
+      const isOv=h>=13&&h<=16;
+      const sc=vol===0?'<span style="color:#94a3b8">-</span>':util>1?'<span style="color:#dc2626;font-weight:700">Over</span>':util>0.85?'<span style="color:#d97706;font-weight:600">Tight</span>':util>0.5?'<span style="color:#16a34a">Good</span>':'<span style="color:#94a3b8">Light</span>';
+      const agCells=AGENTS.map(a=>{const cnt=wa.filter(r=>r.hour===h&&r.agent===a).length;const inR=rAg.includes(a);return`<td style="text-align:center;${!inR?'color:#e5e7eb':''}">${inR?`<strong>${cnt}</strong>`:'-'}</td>`;}).join('');
+      return`<tr style="background:${isOv?'#fefce8':''}"><td><strong>${String(h).padStart(2,'0')}:00</strong>${isOv?' <span class="badge g" style="font-size:9px">peak</span>':''}</td><td><strong>${vol}</strong></td><td style="color:${needed>rAg.length?'#dc2626':'#16a34a'};font-weight:700">${needed}</td><td>${cap}</td><td>${rAg.length}</td><td style="color:${gap<0?'#dc2626':gap===0?'#d97706':'#16a34a'};font-weight:700">${gap>=0?'+':''}${gap}</td><td>${(util*100).toFixed(0)}%</td><td>${sc}</td>${agCells}</tr>`;
+    }).join('');
+  }
+
+  if(name==='repeat'){
+    const rep=wa.filter(r=>r.isRepeat).length;
+    const uniq=Object.keys(phoneFreq).length;
+    const repCust=Object.values(phoneFreq).filter(v=>v>1).length;
+    document.getElementById('kpi-repeat').innerHTML=[
+      {l:'Total WA Chats',v:total,c:''},
+      {l:'Repeat Chats',v:rep,c:'red'},
+      {l:'Repeat Chat %',v:(total?rep/total*100:0).toFixed(1)+'%',c:'red'},
+      {l:'Repeat Customers',v:repCust,c:'amber'},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div></div>`).join('');
+    document.getElementById('repeat-tbody').innerHTML=AGENTS.map(a=>{const rows=wa.filter(r=>r.agent===a);const rep=rows.filter(r=>r.isRepeat).length;const p=rows.length?rep/rows.length*100:0;return`<tr><td><span class="dot" style="background:${ACOLOR[a]}"></span>${a}</td><td>${rows.length}</td><td>${rep}</td><td><strong>${p.toFixed(1)}%</strong></td><td><span class="badge ${p>60?'r':p>40?'a':'g'}">${p>60?'High':p>40?'Mid':'Low'}</span></td></tr>`;}).join('');
+    const fb={'1':0,'2':0,'3':0,'4+':0};Object.values(phoneFreq).forEach(c=>{if(c===1)fb['1']++;else if(c===2)fb['2']++;else if(c===3)fb['3']++;else fb['4+']++;});
+    destroyC('c-freq');
+    CH['c-freq']=new Chart(document.getElementById('c-freq'),{type:'bar',data:{labels:Object.keys(fb).map(k=>k+' contact'+(k==='1'?'':'s')),datasets:[{data:Object.values(fb),backgroundColor:['#16a34a','#ca8a04','#dc2626','#991b1b'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+  }
+
+  if(name==='orders'){
+    const orderData=Object.entries(orderFreq).sort((a,b)=>b[1]-a[1]);
+    const multiContact=orderData.filter(([o,c])=>c>1);
+    document.getElementById('kpi-orders').innerHTML=[
+      {l:'Total Orders',v:Object.keys(orderFreq).length,c:''},
+      {l:'Multi-contact Orders',v:multiContact.length,c:'amber'},
+      {l:'4+ Contact Orders',v:orderData.filter(([,c])=>c>=4).length,c:'red'},
+      {l:'Chats w/ Order',v:wa.filter(r=>r.order&&r.order!=='nan'&&r.order!=='-').length,c:'blue'},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div></div>`).join('');
+    document.getElementById('order-tbody').innerHTML=orderData.slice(0,15).map(([o,c])=>{
+      const rows=wa.filter(r=>r.order===o);
+      const agents=[...new Set(rows.map(r=>r.agent))].map(a=>ASHORT[a]||a.split(' ')[0]).join(', ');
+      const t=rows.map(r=>r.resMin).filter(v=>v!==null&&v>0);
+      const lastStatus=rows[rows.length-1]?.status||'-';
+      return`<tr><td><strong>${o}</strong></td><td><span class="badge ${c>=4?'r':c>=2?'a':'g'}">${c}</span></td><td style="font-size:11px;color:#64748b">${agents}</td><td>${t.length?fmt(avg(t)):'-'}</td><td><span class="badge ${lastStatus==='completed'?'g':'a'}">${lastStatus}</span></td></tr>`;
+    }).join('');
+    document.getElementById('order-hot-tbody').innerHTML=orderData.filter(([,c])=>c>=4).slice(0,15).map(([o,c])=>{
+      const rows=wa.filter(r=>r.order===o);
+      const lastAgent=rows[rows.length-1]?.agent||'-';
+      return`<tr><td><strong style="color:#dc2626">${o}</strong></td><td><span class="badge r">${c} contacts</span></td><td>${ASHORT[lastAgent]||lastAgent}</td><td style="color:#64748b;font-size:11px">Unresolved / repeat issue</td></tr>`;
+    }).join('');
+  }
+
+  if(name==='transfers'){
+    const transRows=wa.filter(r=>r.status==='transferred');
+    const transRate=total?transRows.length/total*100:0;
+    document.getElementById('kpi-transfers').innerHTML=[
+      {l:'Total Transfers',v:transRows.length,c:'amber'},
+      {l:'Transfer Rate',v:transRate.toFixed(1)+'%',c:transRate>10?'red':'amber'},
+      {l:'Manual Reassigns',v:wa.filter(r=>r.handoffReason&&r.handoffReason.includes('Manual')).length,c:''},
+      {l:'Agent-to-Agent',v:wa.filter(r=>r.handoffReason&&r.handoffReason.includes('reassigned')).length,c:''},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div></div>`).join('');
+    document.getElementById('transfer-tbody').innerHTML=AGENTS.map(a=>{
+      const rows=wa.filter(r=>r.agent===a);
+      const trans=rows.filter(r=>r.status==='transferred').length;
+      const p=rows.length?trans/rows.length*100:0;
+      return`<tr><td><span class="dot" style="background:${ACOLOR[a]}"></span>${a}</td><td>${rows.length}</td><td>${trans}</td><td><strong>${p.toFixed(1)}%</strong></td><td><span class="badge ${p>10?'r':p>5?'a':'g'}">${p>10?'High':p>5?'Mid':'Low'}</span></td></tr>`;
+    }).join('');
+    document.getElementById('transfer-detail-tbody').innerHTML=wa.filter(r=>r.handoffReason).slice(0,20).map(r=>`<tr><td>${r.ticketId}</td><td>${ASHORT[r.agent]||r.agent}</td><td style="font-size:11px;color:#64748b">${r.handoffReason}</td></tr>`).join('') || '<tr><td colspan="3" style="color:#94a3b8">No transfer details available</td></tr>';
+  }
+
+  if(name==='csat'){
+    const csatRows=wa.filter(r=>r.csat!==null);
+    document.getElementById('csat-warn').style.display=csatRows.length?'none':'block';
+    if(!csatRows.length){document.getElementById('kpi-csat').innerHTML='';return;}
+    const csatGood=csatRows.filter(r=>r.csat>=4).length;
+    const csatBad=csatRows.filter(r=>r.csat<=3).length;
+    const avgScore=avg(csatRows.map(r=>r.csat));
+    const csatPct=csatRows.length?csatGood/csatRows.length*100:0;
+    document.getElementById('kpi-csat').innerHTML=[
+      {l:'CSAT Rated',v:csatRows.length,s:'of '+total+' chats',c:''},
+      {l:'CSAT (4-5)',v:csatGood,s:csatPct.toFixed(1)+'%',c:'green'},
+      {l:'DSAT (1-3)',v:csatBad,s:(csatRows.length?csatBad/csatRows.length*100:0).toFixed(1)+'%',c:'red'},
+      {l:'Avg Score',v:fmt(avgScore)+'/5',s:'overall',c:avgScore>=4?'green':avgScore>=3?'amber':'red'},
+      {l:'5 Star',v:csatRows.filter(r=>r.csat===5).length,s:(csatRows.length?csatRows.filter(r=>r.csat===5).length/csatRows.length*100:0).toFixed(1)+'%',c:'green'},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+    destroyC('c-ratings');
+    CH['c-ratings']=new Chart(document.getElementById('c-ratings'),{type:'bar',data:{labels:['5 Star','4 Star','3 Star','2 Star','1 Star'],datasets:[{data:[5,4,3,2,1].map(r=>csatRows.filter(c=>c.csat===r).length),backgroundColor:['#16a34a','#4ade80','#ca8a04','#f97316','#dc2626'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+    const agCSAT=AGENTS.map(a=>{const rows=wa.filter(r=>r.agent===a&&r.csat!==null);return{a:ASHORT[a],good:rows.filter(r=>r.csat>=4).length,bad:rows.filter(r=>r.csat<=3).length};});
+    destroyC('c-csat-agent');
+    CH['c-csat-agent']=new Chart(document.getElementById('c-csat-agent'),{type:'bar',data:{labels:agCSAT.map(r=>r.a),datasets:[{label:'CSAT (4-5)',data:agCSAT.map(r=>r.good),backgroundColor:'#16a34a',borderRadius:4,stack:'s'},{label:'DSAT (1-3)',data:agCSAT.map(r=>r.bad),backgroundColor:'#dc2626',borderRadius:4,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:8}}},scales:{x:{ticks:{font:{size:11}},stacked:true},y:{ticks:{font:{size:11}},beginAtZero:true,stacked:true}}}});
+    // CSAT/DSAT by agent table
+    const csatAgentTbody = document.getElementById('csat-agent-tbody');
+    if(csatAgentTbody){
+      csatAgentTbody.innerHTML = AGENTS.map(a=>{
+        const aRows = wa.filter(r=>r.agent===a&&r.csat!==null);
+        if(!aRows.length) return `<tr><td><span class="dot" style="background:${ACOLOR[a]}"></span>${a}</td><td><span class="badge ${NEW_AGENTS.includes(a)?'a':'b'}">${NEW_AGENTS.includes(a)?'New':'Senior'}</span></td><td colspan="9" style="color:#ccc">No CSAT data</td></tr>`;
+        const csatG=aRows.filter(r=>r.csat>=4).length;
+        const csatB=aRows.filter(r=>r.csat<=3).length;
+        const avgS=avg(aRows.map(r=>r.csat));
+        const five=aRows.filter(r=>r.csat===5).length;
+        const one=aRows.filter(r=>r.csat===1).length;
+        const csatPct=aRows.length?csatG/aRows.length*100:0;
+        const dsatPct=aRows.length?csatB/aRows.length*100:0;
+        const rating=avgS>=4.5?'Excellent':avgS>=4?'Good':avgS>=3?'Average':'Poor';
+        const ratingC=avgS>=4.5?'g':avgS>=4?'g':avgS>=3?'a':'r';
+        return`<tr>
+          <td><span class="dot" style="background:${ACOLOR[a]}"></span><strong>${a}</strong></td>
+          <td><span class="badge ${NEW_AGENTS.includes(a)?'a':'b'}">${NEW_AGENTS.includes(a)?'New':'Senior'}</span></td>
+          <td><strong>${aRows.length}</strong></td>
+          <td style="color:#16a34a;font-weight:700">${csatG}</td>
+          <td><span class="badge g">${csatPct.toFixed(1)}%</span></td>
+          <td style="color:#dc2626;font-weight:700">${csatB}</td>
+          <td><span class="badge ${dsatPct>30?'r':dsatPct>15?'a':'g'}">${dsatPct.toFixed(1)}%</span></td>
+          <td><strong style="color:${avgS>=4?'#16a34a':avgS>=3?'#d97706':'#dc2626'}">${fmt(avgS)}</strong></td>
+          <td>${five}</td>
+          <td>${one>0?`<span style="color:#dc2626;font-weight:700">${one}</span>`:one}</td>
+          <td><span class="badge ${ratingC}">${rating}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    // DSAT table with disposition column
+    document.getElementById('dsat-tbody').innerHTML=wa.filter(r=>r.csat!==null&&r.csat<=3).sort((a,b)=>a.csat-b.csat).slice(0,50).map(r=>`<tr><td>${r.ticketId}</td><td>${r.agent}</td><td>${r.customer||'-'}</td><td><span class="badge ${r.csat<=2?'r':'a'}">${r.csat} Star</span></td><td>${r.order||'-'}</td><td style="font-size:11px;color:#64748b">${r.disposition||'-'}</td><td>${r.status}</td></tr>`).join('');
+  }
+
+  if(name==='roster'){
+    const peakH=hours[vols.indexOf(Math.max(...vols))];
+    const peakVol=Math.max(...vols);
+    const agentsNeeded=Math.ceil(peakVol/12.75);
+    document.getElementById('kpi-roster').innerHTML=[
+      {l:'Peak Hour',v:String(peakH).padStart(2,'0')+':00',s:peakVol+' chats incoming',c:'red'},
+      {l:'Agents at Peak',v:agentsNeeded,s:'recommended minimum',c:agentsNeeded>6?'red':'blue'},
+      {l:'Shift A Coverage',v:'08:00-17:00',s:'Nancy, Sanjay, Vamshi*',c:''},
+      {l:'Shift B Coverage',v:'13:00-22:00',s:'Chandan M, Arbaz, ChandanBS*',c:''},
+    ].map(k=>`<div class="kpi ${k.c}"><div class="lbl">${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+
+    const rDef=[
+      {n:'Nancy Priyanka F',days:['A','A','A','A','A','A','OFF']},
+      {n:'Sanjay Joseph V',days:['A','A','A','A','A','OFF','A']},
+      {n:'Vamshi Krishna',days:['A','A','A','A','OFF','A','A'],isNew:true},
+      {n:'Chandan M',days:['B','B','B','OFF','B','B','B']},
+      {n:'Mohammed Arbaz',days:['B','B','OFF','B','B','B','B']},
+      {n:'Chandan Kumar BS',days:['OFF','B','B','B','B','B','B'],isNew:true},
+    ];
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const sg=document.getElementById('shift-grid');
+    sg.innerHTML=`<div class="sg-cell sg-hdr" style="text-align:left;padding-left:12px">Agent</div>${days.map(d=>`<div class="sg-cell sg-hdr">${d}</div>`).join('')}${rDef.map(ag=>`<div class="sg-cell" style="text-align:left;padding-left:12px"><span class="dot" style="background:${ACOLOR[ag.n]}"></span>${ag.n}${ag.isNew?' <span class="badge a" style="font-size:9px">New</span>':''}</div>${ag.days.map(d=>`<div class="sg-cell"><span class="${d==='A'?'sh-a':d==='B'?'sh-b':'sh-off'}">${d}</span></div>`).join('')}`).join('')}`;
+
+    const cvgTbody=document.querySelector('#coverage-table tbody');
+    cvgTbody.innerHTML=[{l:'Shift A',s:'A'},{l:'Shift B',s:'B'},{l:'Total',s:'ALL'}].map(row=>`<tr><td><strong>${row.l}</strong></td>${days.map((_,di)=>{let cnt=0;rDef.forEach(ag=>{const d=ag.days[di];if(row.s==='ALL'?d!=='OFF':d===row.s)cnt++;});const need=row.s==='ALL'?6:3;return`<td style="text-align:center;font-weight:700;color:${cnt>=need?'#16a34a':cnt===need-1?'#ca8a04':'#dc2626'}">${cnt}</td>`;}).join('')}</tr>`).join('');
+
+    const topHours=hours.filter(h=>vols[h-8]>0).sort((a,b)=>vols[b-8]-vols[a-8]).slice(0,5);
+    document.getElementById('peak-check').innerHTML=topHours.map(h=>{
+      const vol=vols[h-8],need=Math.ceil(vol/12.75),have=(ROSTER_AG[h]||[]).length;
+      const ok=have>=need;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="font-weight:700;min-width:52px">${String(h).padStart(2,'0')}:00</span><div class="bar-bg" style="flex:1"><div class="bar-fill" style="width:${vol/vols[topHours[0]-8]*100}%;background:${ok?'#3b82f6':'#dc2626'}"></div></div><span style="min-width:24px;font-weight:700">${vol}</span><span style="font-size:11px;min-width:100px;color:${ok?'#16a34a':'#dc2626'}">${need} needed/${have} rostered</span><span class="badge ${ok?'g':'r'}">${ok?'OK':'Under'}</span></div>`;
+    }).join('');
+  }
+}
+
+document.getElementById('file-input').addEventListener('change',function(e){
+  const file=e.target.files[0];if(!file)return;
+  document.getElementById('report-date').textContent='Loading '+file.name+'...';
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true,cellNF:false,raw:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){document.getElementById('report-date').textContent='No data found in file';return;}
+      G=processData(rows);
+      document.getElementById('no-data').style.display='none';
+      document.getElementById('summary-data').style.display='block';
+      document.getElementById('report-date').textContent='File: '+file.name.replace(/\.[^.]+$/,'')+'  |  '+G.wa.length+' WhatsApp chats loaded';
+      const activeTab=document.querySelector('.tab.active').textContent.toLowerCase().replace(/[\s%&]/g,'').replace('dsat','');
+      renderTab({summary:'summary',resolutiontime:'resolution',agents:'agents',efficiency:'efficiency',hourlyload:'hourly',repeat:'repeat',orders:'orders',transfers:'transfers',csat:'csat',roster:'roster'}[activeTab]||'summary');
+    }catch(err){document.getElementById('report-date').textContent='Error: '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+});
+</script>
+</body>
+</html>
